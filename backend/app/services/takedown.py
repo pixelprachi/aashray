@@ -72,8 +72,8 @@ def build_takedown(d: dict) -> dict:
         "Please keep a copy of the content and the records of the account that posted it, "
         "so that they can be shared with law enforcement if needed.",
         "",
-        "4. When this was sent",
-        f"Sent on: {_fmt(sent)}",
+        "4. Time of this notice",
+        f"Notice time: {_fmt(sent)}",
         f"{HOURS} hours from then: {_fmt(by)}",
         "",
         "Signature: ______________________",
