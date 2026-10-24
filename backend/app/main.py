@@ -2,6 +2,7 @@ from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 from sqlalchemy.orm import Session
+from app.routers import draft
 
 from app import models, vault_models  # noqa: F401  (registers the tables)
 from app.db import Base, engine, get_db
@@ -27,3 +28,4 @@ def health(db: Session = Depends(get_db)):
     db.execute(text("SELECT 1"))
     return {"status": "ok", "db": "connected"}
 app.include_router(ai.router)
+app.include_router(draft.router)
