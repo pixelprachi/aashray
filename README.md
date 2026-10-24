@@ -16,7 +16,7 @@ recHERsion'26 &nbsp;·&nbsp; Problem Statement 2: Women's Safety &nbsp;·&nbsp; 
 > She is not ready to call the police. She is not sure it is "serious enough". She just does not want it to disappear, and she does not want anyone else to see it.
 >
 > Most tools ask her to decide something right now. **Aashray asks her for nothing.**
-> It lets her save, quietly and safely, and decide later. Or never.
+> It lets her save, quietly and safely, and decide later, or now.
 
 *Aashray* (आश्रय) means **shelter**. That is the whole idea.
 
@@ -215,7 +215,6 @@ We would rather you know exactly what this is.
 - **There is no password reset, by design.** If the passphrase is lost, the vault cannot be opened by anyone. That is the price of nobody else being able to read it.
 - **The court certificate** needs a person to sign it (Part A by the declarant, and Part B by an expert where the court requires). Aashray prepares the worksheet. It does not replace that person.
 - **AI can be wrong.** The summary is made from her own words and is labelled so. She is told to check it, and her original note is always kept.
-- **Free-tier AI note.** On Google's free Gemini tier, inputs may be used to improve Google's products. Use *invented* text only when testing, and use a paid key for any real deployment.
 
 ---
 
@@ -231,7 +230,7 @@ We would rather you know exactly what this is.
 
 ## The team
 
-Built for recHERsion'26 by **Rishi Jha** ([@rishi-jha-exe](https://github.com/rishi-jha-exe)) and **Prachi Sahu** ([@pixelprachi](https://github.com/pixelprachi)).
+Built for recHERsion'26 by **Prachi Sahu** ([@pixelprachi](https://github.com/pixelprachi)).
 
 <div align="center">
 
