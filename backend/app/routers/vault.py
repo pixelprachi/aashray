@@ -169,3 +169,24 @@ def verify(vault_id: str, db: Session = Depends(get_db)):
             return {"ok": False, "count": len(rows), "broken_at": r.seq}
         expected_prev = r.entry_hash
     return {"ok": True, "count": len(rows), "broken_at": None}
+
+
+@router.get("/{vault_id}/lookup/{sha256}")
+def lookup(vault_id: str, sha256: str, db: Session = Depends(get_db)):
+    need_vault(db, vault_id)
+    if not HEX64.match(sha256):
+        raise HTTPException(422, "bad sha256")
+    rows = entries(db, vault_id)
+    chain = verify(vault_id, db)
+    hit = next((r for r in rows if r.file_sha256 == sha256), None)
+    if not hit:
+        return {"found": False, "chain_ok": chain["ok"]}
+    return {
+        "found": True,
+        "seq": hit.seq,
+        "total": len(rows),
+        "captured_at": hit.captured_at,
+        "entry_hash": hit.entry_hash,
+        "chain_ok": chain["ok"],
+        "broken_at": chain["broken_at"],
+    }
