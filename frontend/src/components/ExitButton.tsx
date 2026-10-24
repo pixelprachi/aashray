@@ -26,7 +26,7 @@ export default function ExitButton() {
     <button
       onClick={leave}
       title="Leave quickly (or press Esc twice)"
-      className="rounded-full bg-accent/40 px-4 py-1.5 text-sm font-medium transition hover:bg-accent/70"
+      className="shrink-0 whitespace-nowrap rounded-full bg-accent px-3 py-1.5 sm:px-4 text-sm font-semibold text-night transition hover:brightness-95"
     >
       Quick exit
     </button>

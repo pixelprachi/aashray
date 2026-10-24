@@ -4,3 +4,15 @@ __pycache__/
 .DS_Store
 node_modules/
 backend/storage/
+
+# secrets and local data
+.env
+.env.*
+!.env.example
+backend/storage/
+venv/
+.venv/
+__pycache__/
+node_modules/
+.next/
+.DS_Store

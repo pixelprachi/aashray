@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from app import models, vault_models  # noqa: F401  (registers the tables)
 from app.db import Base, engine, get_db
-from app.routers import shield, vault
+from app.routers import ai, shield, vault
 
 Base.metadata.create_all(engine)
 
@@ -26,3 +26,4 @@ app.include_router(vault.router)
 def health(db: Session = Depends(get_db)):
     db.execute(text("SELECT 1"))
     return {"status": "ok", "db": "connected"}
+app.include_router(ai.router)
