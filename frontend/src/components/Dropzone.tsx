@@ -56,7 +56,7 @@ export default function Dropzone({ onFiles, title, hint, fileLabel, multiple, di
           e.target.value = "";
         }}
       />
-      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#2F6F6A" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#232a6b" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <rect x="3" y="4" width="18" height="16" rx="3" />
         <circle cx="9" cy="10" r="1.6" />
         <path d="M21 16l-5-5-8 8" />

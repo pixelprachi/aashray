@@ -1,16 +1,23 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import Header from "@/components/Header";
 import Dropzone from "@/components/Dropzone";
+import Jaali, { BLANK, hexToBits } from "@/components/Jaali";
 import { API } from "@/lib/api";
 import { computeHashes, ShieldHashes } from "@/lib/hash";
+import { saveLastProtected } from "@/lib/shieldLast";
+import { useReady } from "@/lib/useReady";
 
 const steps = [
   ["1", "Pick a photo", "Choose the image you want to keep safe."],
   ["2", "A fingerprint is made", "A short code, created on your device. The photo stays with you."],
   ["3", "Copies get stopped", "Platforms that join can block matching uploads."],
 ];
+
+function groups(hex: string) {
+  return hex.match(/.{1,4}/g)?.join(" ") ?? hex;
+}
 
 export default function ShieldPage() {
   const [file, setFile] = useState<File | null>(null);
@@ -49,6 +56,7 @@ export default function ShieldPage() {
         body: JSON.stringify(h),
       });
       if (!r.ok) throw new Error("register failed");
+      saveLastProtected(h);
       setSent(h);
       setState("done");
     } catch {
@@ -59,18 +67,18 @@ export default function ShieldPage() {
   return (
     <>
       <Header />
-      <main className="mx-auto max-w-3xl space-y-8 px-5 py-10">
-        <section className="fade-up space-y-3">
+      <main className="mx-auto max-w-3xl space-y-8 px-4 py-10 sm:px-5 sm:py-14">
+        <section className="space-y-3">
           <p className="text-sm font-medium uppercase tracking-widest text-primary">Shield</p>
-          <h1 className="font-display text-4xl leading-tight sm:text-5xl">
+          <h1 className="font-display text-4xl leading-[1.05] tracking-[-0.01em] sm:text-5xl">
             Keep your photo from being shared.
           </h1>
-          <p className="max-w-xl text-lg text-muted">
+          <p className="max-w-xl text-lg leading-relaxed text-muted">
             Protect a photo before anyone can misuse it. Nothing is uploaded. You stay in control the whole time.
           </p>
         </section>
 
-        <section className="card fade-up space-y-5 p-6">
+        <section className="card space-y-5 p-5 sm:p-6">
           {!preview ? (
             <Dropzone
               onFiles={pick}
@@ -83,12 +91,12 @@ export default function ShieldPage() {
               <img
                 src={preview}
                 alt="Selected photo"
-                className="max-h-80 w-full rounded-2xl border border-line bg-bg object-contain"
+                className="max-h-80 w-full rounded-xl border border-line bg-bg object-contain"
               />
-              <div className="flex items-center justify-between text-sm">
+              <div className="flex items-center justify-between gap-3 text-sm">
                 <span className="truncate text-muted">{file?.name}</span>
                 {state !== "hashing" && (
-                  <button onClick={reset} className="font-medium text-primary hover:underline">
+                  <button onClick={reset} className="shrink-0 font-medium text-primary hover:underline">
                     Choose a different photo
                   </button>
                 )}
@@ -103,38 +111,18 @@ export default function ShieldPage() {
             </button>
           )}
 
-          {state === "done" && sent && (
-            <div className="fade-up space-y-3 rounded-2xl border border-saved/40 bg-saved/10 p-5">
-              <div className="flex items-center gap-3">
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#3E8E6B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <circle cx="12" cy="12" r="10" />
-                  <path d="M8 12.5l3 3 5-6" />
-                </svg>
-                <p className="text-lg font-semibold text-saved">Protected. Your photo never left this device.</p>
-              </div>
-              <details className="text-sm">
-                <summary className="cursor-pointer text-muted">See exactly what was sent</summary>
-                <pre className="mt-2 overflow-x-auto rounded-xl bg-white p-3 text-xs">
-                  {JSON.stringify(sent, null, 2)}
-                </pre>
-              </details>
-              <div className="flex gap-4 pt-1 text-sm font-medium text-primary">
-                <button onClick={reset} className="hover:underline">Protect another photo</button>
-                <Link href="/platform-demo" className="hover:underline">See it work on a demo platform →</Link>
-              </div>
-            </div>
-          )}
+          {state === "done" && sent && <Protected sent={sent} onReset={reset} />}
 
           {state === "error" && (
-            <p className="rounded-2xl border border-accent bg-accent/25 p-4 text-sm">
+            <p role="alert" className="rounded-xl border border-accent/50 bg-[#fdf3dc] p-4 text-sm text-night">
               Something went wrong. Please try again.
             </p>
           )}
         </section>
 
-        <section className="fade-up grid gap-4 sm:grid-cols-3">
+        <section className="grid gap-4 sm:grid-cols-3">
           {steps.map(([n, t, d]) => (
-            <div key={n} className="rounded-2xl border border-line bg-surface/70 p-5">
+            <div key={n} className="rounded-xl border border-line bg-surface p-5">
               <div className="mb-3 grid h-8 w-8 place-items-center rounded-full bg-tint text-sm font-semibold text-primary">
                 {n}
               </div>
@@ -153,5 +141,43 @@ export default function ShieldPage() {
         </p>
       </main>
     </>
+  );
+}
+
+function Protected({ sent, onReset }: { sent: ShieldHashes; onReset: () => void }) {
+  const ready = useReady();
+  const bits = useMemo(() => hexToBits(sent.phash), [sent.phash]);
+
+  return (
+    <div className="rounded-2xl border border-saved/40 bg-saved/10 p-5 sm:p-6">
+      <div className="grid items-center gap-6 sm:grid-cols-[190px_1fr]">
+        <Jaali
+          bits={ready ? bits : BLANK}
+          label="The fingerprint of your photo, as 64 tiles"
+          className="mx-auto w-44 sm:w-full"
+        />
+        <div className="space-y-3">
+          <p className="text-lg font-semibold text-saved">Protected. Your photo never left this device.</p>
+          <p className="font-mono text-sm tracking-wide text-ink">{groups(sent.phash)}</p>
+          <p className="text-[15px] leading-relaxed text-muted">
+            These 64 tiles are all that was sent. Photo bytes uploaded: 0.
+          </p>
+        </div>
+      </div>
+
+      <details className="mt-5 text-sm">
+        <summary className="cursor-pointer text-muted">See exactly what was sent</summary>
+        <pre className="mt-2 overflow-x-auto rounded-lg bg-white p-3 text-xs">{JSON.stringify(sent, null, 2)}</pre>
+      </details>
+
+      <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm font-medium text-primary">
+        <button onClick={onReset} className="hover:underline">
+          Protect another photo
+        </button>
+        <Link href="/platform-demo" className="hover:underline">
+          See it work on a demo platform
+        </Link>
+      </div>
+    </div>
   );
 }
