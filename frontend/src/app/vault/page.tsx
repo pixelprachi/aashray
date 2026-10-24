@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import Header from "@/components/Header";
 import EvidenceList from "@/components/EvidenceList";
 import { forgetVaultId, getVaultId, saveVaultId } from "@/lib/crypto";
+import Understand from "@/components/Understand";
 import {
   OpenEntry,
   Integrity,
@@ -27,6 +28,7 @@ export default function VaultPage() {
   const [note, setNote] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [savedMsg, setSavedMsg] = useState<string | null>(null);
   const [entries, setEntries] = useState<OpenEntry[]>([]);
   const [integrity, setIntegrity] = useState<Integrity | null>(null);
 
@@ -84,6 +86,7 @@ export default function VaultPage() {
     setKey(null);
     setEntries([]);
     setIntegrity(null);
+    setSavedMsg(null);
     setPhase("locked");
   }
 
@@ -107,11 +110,17 @@ export default function VaultPage() {
     if (!vaultId || !key || files.length === 0) return;
     setBusy(true);
     setError(null);
+    setSavedMsg(null);
     try {
       for (const f of files) await addEvidence(vaultId, key, f, noteText);
       setNote("");
       setEntries(await listEvidence(vaultId, key));
       setIntegrity(null);
+      setSavedMsg(
+        files.length === 1
+          ? `Saved and locked: ${files[0].name}. You can see it under Saved items.`
+          : `Saved and locked: ${files.length} items. You can see them under Saved items.`
+      );
     } catch {
       setError("Couldn't save that. Please try again.");
     } finally {
@@ -272,7 +281,17 @@ export default function VaultPage() {
                 <span className="text-muted">Or write a note first, then add files and it travels with them.</span>
               </div>
             </section>
-
+              {savedMsg && (
+              <p role="status" className="rounded-2xl border border-saved/40 bg-saved/10 p-4 text-sm font-medium text-saved">
+                {savedMsg}
+              </p>
+            )}
+              <Understand
+              text={note}
+              onSave={(summary) =>
+                saveFiles([new File([summary], "summary.txt", { type: "text/plain" })], "Summary made by AI. Check it before relying on it.")
+              }
+            />
             {error && <p className="rounded-2xl border border-accent bg-accent/25 p-4 text-sm">{error}</p>}
 
             <section className="space-y-3">
