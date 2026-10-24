@@ -24,6 +24,16 @@ def _val(s) -> str:
     return _clean(s) or BLANK
 
 
+def _when(iso: str) -> str:
+    try:
+        dt = datetime.fromisoformat(iso)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.astimezone(IST).strftime("%d %b %Y, %I:%M %p IST")
+    except ValueError:
+        return iso
+
+
 def _summary(what: str) -> tuple[str, str]:
     try:
         out = ask_json(SUMMARY_SYSTEM, f"<account>\n{what}\n</account>")
@@ -81,7 +91,7 @@ def build_complaint(d: dict) -> dict:
         )
         for e in entries:
             label = _clean(e.get("label")) or "Saved item"
-            L.append(f"  {e['seq']}. {label} - saved {e['captured_at']}")
+            L.append(f"  {e['seq']}. {label} - saved {_when(e['captured_at'])}")
     else:
         L.append(f"No items have been added yet. {BLANK}")
     L.append("")
@@ -121,13 +131,16 @@ def build_complaint(d: dict) -> dict:
             L += [
                 f"No. {e['seq']}",
                 f"  Item: {_clean(e.get('label')) or 'Saved item'}",
-                f"  Saved at (server time): {e['captured_at']}",
+                f"  Saved at: {_when(e['captured_at'])} (recorded as {e['captured_at']})",
                 f"  File SHA-256: {e['file_sha256']}",
                 f"  Record hash: {e['entry_hash']}",
                 "",
             ]
 
-    L.append(DISCLAIMER)
+    L.append(
+        "Draft prepared with Aashray from the complainant's own account. The provisions "
+        "listed are possible matches and are not legal advice."
+    )
     text = "\n".join(L)
     return {
         "text": text,
