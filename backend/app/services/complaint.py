@@ -34,15 +34,16 @@ def _when(iso: str) -> str:
         return iso
 
 
-def _summary(what: str) -> tuple[str, str]:
-    try:
-        out = ask_json(SUMMARY_SYSTEM, f"<account>\n{what}\n</account>")
-        s = _clean(out.get("summary", ""))
-        if 20 <= len(s) <= 1200:
-            return s, "ai"
-    except LLMError as e:
-        print("AI error:", e)
-    # Fallback: the person's own words, untouched.
+def _summary(what: str, use_ai: bool = False) -> tuple[str, str]:
+    if use_ai:
+        try:
+            out = ask_json(SUMMARY_SYSTEM, f"<account>\n{what}\n</account>")
+            s = _clean(out.get("summary", ""))
+            if 20 <= len(s) <= 1200:
+                return s, "ai"
+        except LLMError as e:
+            print("AI error:", e)
+    # Fallback, and the default: the person's own words, untouched.
     return _clean(what), "template"
 
 
@@ -63,7 +64,7 @@ def build_complaint(d: dict) -> dict:
     labels = [ABUSE_TYPES[t]["label"].lower() for t in types]
     needs_review = any(ABUSE_TYPES[t].get("review") for t in types)
     sections = _sections(types, images_shared)
-    summary, source = _summary(d["what_happened"])
+    summary, source = _summary(d["what_happened"], bool(d.get("use_ai")))
     entries = sorted(d.get("entries") or [], key=lambda e: e["seq"])
     today = datetime.now(IST).strftime("%d %B %Y")
 

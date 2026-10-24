@@ -31,6 +31,7 @@ class ComplaintIn(BaseModel):
     accused: str = Field(default="", max_length=300)
     platform: str = Field(default="", max_length=200)
     complainant_name: str = Field(default="", max_length=120)
+    use_ai: bool = False
     entries: list[Entry] = Field(default_factory=list, max_length=200)
 
     @field_validator("types")
@@ -96,3 +97,7 @@ class Section63In(BaseModel):
 @router.post("/section63")
 def section63(body: Section63In):
     return build_section63(body.model_dump())
+
+@router.get("/types")
+def types():
+    return [{"key": k, "label": v["label"], "blurb": v["blurb"]} for k, v in ABUSE_TYPES.items()]
