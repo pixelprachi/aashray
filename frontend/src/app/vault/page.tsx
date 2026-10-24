@@ -1,9 +1,10 @@
 "use client";
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import Header from "@/components/Header";
 import EvidenceList from "@/components/EvidenceList";
-import { forgetVaultId, getVaultId, saveVaultId } from "@/lib/crypto";
 import Understand from "@/components/Understand";
+import { forgetVaultId, getVaultId, saveVaultId } from "@/lib/crypto";
 import {
   OpenEntry,
   Integrity,
@@ -31,6 +32,7 @@ export default function VaultPage() {
   const [savedMsg, setSavedMsg] = useState<string | null>(null);
   const [entries, setEntries] = useState<OpenEntry[]>([]);
   const [integrity, setIntegrity] = useState<Integrity | null>(null);
+  const [checking, setChecking] = useState(false);
 
   useEffect(() => {
     const id = getVaultId();
@@ -150,10 +152,15 @@ export default function VaultPage() {
 
   async function onCheck() {
     if (!vaultId) return;
+    setIntegrity(null);
+    setChecking(true);
     try {
-      setIntegrity(await checkIntegrity(vaultId));
+      const [result] = await Promise.all([checkIntegrity(vaultId), new Promise((r) => setTimeout(r, 500))]);
+      setIntegrity(result);
     } catch {
       setError("Couldn't run the check.");
+    } finally {
+      setChecking(false);
     }
   }
 
@@ -281,39 +288,56 @@ export default function VaultPage() {
                 <span className="text-muted">Or write a note first, then add files and it travels with them.</span>
               </div>
             </section>
-              {savedMsg && (
+
+            {savedMsg && (
               <p role="status" className="rounded-2xl border border-saved/40 bg-saved/10 p-4 text-sm font-medium text-saved">
                 {savedMsg}
               </p>
             )}
-              <Understand
+
+            <Understand
               text={note}
               onSave={(summary) =>
                 saveFiles([new File([summary], "summary.txt", { type: "text/plain" })], "Summary made by AI. Check it before relying on it.")
               }
             />
+
             {error && <p className="rounded-2xl border border-accent bg-accent/25 p-4 text-sm">{error}</p>}
 
             <section className="space-y-3">
               <div className="flex items-center justify-between">
                 <h2 className="font-display text-2xl">Saved items</h2>
-                <button onClick={onCheck} className="text-sm font-medium text-primary hover:underline">
-                  Check that nothing was changed
+                <button
+                  onClick={onCheck}
+                  disabled={checking || entries.length === 0}
+                  className="text-sm font-medium text-primary hover:underline disabled:opacity-40"
+                >
+                  {checking ? "Checking..." : "Check that nothing was changed"}
                 </button>
               </div>
-              {integrity && (
-                <p
-                  className={`fade-up rounded-2xl border p-4 text-sm ${
-                    integrity.ok ? "border-saved/40 bg-saved/10 text-saved" : "border-accent bg-accent/25"
-                  }`}
-                >
-                  {integrity.ok
-                    ? `All ${integrity.count} saved items are intact and in order.`
-                    : `Item #${integrity.broken_at} no longer matches what was recorded.`}
-                </p>
-              )}
-              <EvidenceList entries={entries} onDownload={onDownload} />
+              <EvidenceList entries={entries} onDownload={onDownload} integrity={integrity} checking={checking} />
             </section>
+
+            {entries.length > 0 && (
+              <section className="card space-y-3 p-5 sm:p-6">
+                <h2 className="font-display text-2xl">When you are ready</h2>
+                <p className="text-muted">Nothing here is urgent. Your items stay saved. These are for when you decide to act.</p>
+                <ul className="space-y-2 text-[15px]">
+                  <li>
+                    <Link href="/complaint" className="font-medium text-primary hover:underline">Draft a complaint</Link>
+                    <span className="text-muted"> from your saved items. It is made on your device and not stored.</span>
+                  </li>
+                  <li>
+                    <Link href="/certificate" className="font-medium text-primary hover:underline">Prepare the court certificate worksheet</Link>
+                    <span className="text-muted"> for digital evidence (Section 63 BSA).</span>
+                  </li>
+                  <li>
+                    <Link href="/takedown" className="font-medium text-primary hover:underline">Write a takedown notice</Link>
+                    <span className="text-muted"> for an image that is already online.</span>
+                  </li>
+                </ul>
+              </section>
+            )}
 
             <details className="text-sm text-muted">
               <summary className="cursor-pointer">Your vault ID</summary>

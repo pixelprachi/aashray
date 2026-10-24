@@ -1,8 +1,11 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import Header from "@/components/Header";
+import Jaali, { BLANK, hexToBits } from "@/components/Jaali";
 import { API } from "@/lib/api";
-import { sha256Hex } from "@/lib/crypto";
+import { getVaultId, sha256Hex } from "@/lib/crypto";
+import { useReady } from "@/lib/useReady";
 
 type Result = {
   found: boolean;
@@ -23,6 +26,19 @@ export default function VerifyPage() {
   const [res, setRes] = useState<Result | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Convenience: if this device already has a vault, start with its ID.
+  useEffect(() => {
+    const id = getVaultId();
+    if (id) setVaultId(id);
+  }, []);
+
+  function pickFile(f: File | null) {
+    if (!f) return;
+    setFile(f);
+    setRes(null);
+    setHash(null);
+  }
 
   async function check() {
     if (!file || vaultId.trim().length < 16) return;
@@ -45,23 +61,23 @@ export default function VerifyPage() {
     }
   }
 
-  const good = res?.found && res.chain_ok;
-
   return (
     <>
       <Header />
-      <main className="mx-auto max-w-3xl space-y-6 px-5 py-10">
-        <section className="fade-up space-y-3">
+      <main className="mx-auto max-w-3xl space-y-8 px-4 py-10 sm:px-5 sm:py-14">
+        <section className="space-y-3">
           <p className="text-sm font-medium uppercase tracking-widest text-primary">Verify</p>
-          <h1 className="font-display text-4xl leading-tight sm:text-5xl">Check a file against a vault record.</h1>
-          <p className="max-w-xl text-lg text-muted">
+          <h1 className="font-display text-4xl leading-[1.05] tracking-[-0.01em] sm:text-5xl">
+            Check a file against a vault record.
+          </h1>
+          <p className="max-w-xl text-lg leading-relaxed text-muted">
             See when a file was saved and whether anything changed afterwards. The file is read on this device only.
             Just its fingerprint is checked.
           </p>
         </section>
 
         <form
-          className="card fade-up space-y-4 p-6"
+          className="card space-y-5 p-5 sm:p-6"
           onSubmit={(e) => {
             e.preventDefault();
             check();
@@ -69,52 +85,114 @@ export default function VerifyPage() {
         >
           <label className="block space-y-1">
             <span className="font-medium">Vault ID</span>
-            <input className={input} value={vaultId} onChange={(e) => setVaultId(e.target.value)} />
-          </label>
-          <label className="block space-y-1">
-            <span className="font-medium">The file to check</span>
             <input
-              type="file"
-              className="block w-full text-sm"
-              onChange={(e) => {
-                setFile(e.target.files?.[0] ?? null);
-                setRes(null);
-              }}
+              className={input}
+              value={vaultId}
+              onChange={(e) => setVaultId(e.target.value)}
+              autoComplete="off"
+              spellCheck={false}
             />
           </label>
+
+          <div className="space-y-2">
+            <span className="font-medium">The file to check</span>
+            {!file ? (
+              <label
+                className="dropzone cursor-pointer"
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  pickFile(e.dataTransfer.files[0] ?? null);
+                }}
+              >
+                <input
+                  type="file"
+                  className="hidden"
+                  onChange={(e) => {
+                    pickFile(e.target.files?.[0] ?? null);
+                    e.target.value = "";
+                  }}
+                />
+                <p className="font-medium">Drop the file here, or tap to choose</p>
+                <p className="text-sm text-muted">Any file. It is not uploaded.</p>
+              </label>
+            ) : (
+              <div className="flex items-center justify-between gap-3 rounded-xl border border-line bg-bg p-4 text-sm">
+                <span className="truncate font-medium">{file.name}</span>
+                {!busy && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFile(null);
+                      setRes(null);
+                      setHash(null);
+                    }}
+                    className="shrink-0 font-medium text-primary hover:underline"
+                  >
+                    Choose a different file
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+
           <button className="btn" disabled={busy || !file || vaultId.trim().length < 16}>
             {busy && <span className="spinner" />}
             {busy ? "Checking..." : "Check this file"}
           </button>
         </form>
 
-        {error && <p className="rounded-2xl border border-accent bg-accent/25 p-4 text-sm">{error}</p>}
-
-        {res && (
-          <section
-            className={`fade-up space-y-2 rounded-2xl border p-5 ${
-              good ? "border-saved/40 bg-saved/10" : "border-accent bg-accent/25"
-            }`}
-          >
-            {res.found ? (
-              <>
-                <p className={`text-lg font-semibold ${good ? "text-saved" : ""}`}>
-                  {good
-                    ? `This exact file was saved on ${new Date(res.captured_at!).toLocaleString()}, as item #${res.seq} of ${res.total}.`
-                    : `This file matches item #${res.seq}, but the record chain no longer matches from item #${res.broken_at}.`}
-                </p>
-                {good && <p className="text-sm text-muted">Nothing in the record has been changed since.</p>}
-                <p className="break-all font-mono text-xs text-muted">record {res.entry_hash}</p>
-              </>
-            ) : (
-              <p className="text-lg font-semibold">
-                This file does not match any saved item. It may be a different file, or it may have been changed.
-              </p>
-            )}
-            {hash && <p className="break-all font-mono text-xs text-muted">file {hash}</p>}
-          </section>
+        {error && (
+          <p role="alert" className="rounded-xl border border-accent/50 bg-[#fdf3dc] p-4 text-sm text-night">
+            {error}
+          </p>
         )}
+
+        {res && hash && <Outcome res={res} hash={hash} />}
+
+        <p className="flex items-center justify-center gap-2 text-center text-sm text-muted">
+          <Link href="/about" className="font-medium text-primary hover:underline">
+            How the record works
+          </Link>
+        </p>
       </main>
     </>
+  );
+}
+
+function Outcome({ res, hash }: { res: Result; hash: string }) {
+  const ready = useReady();
+  const bits = useMemo(() => hexToBits(hash.slice(0, 16)), [hash]);
+  const good = res.found && res.chain_ok;
+  const box = good ? "border-saved/40 bg-saved/10" : "border-accent bg-[#fdf3dc]";
+
+  return (
+    <section role="status" className={`rounded-2xl border p-5 sm:p-6 ${box}`}>
+      <div className="grid items-center gap-6 sm:grid-cols-[150px_1fr]">
+        <Jaali
+          bits={ready ? bits : BLANK}
+          label="The fingerprint of your file, as 64 tiles"
+          className="mx-auto w-36 sm:w-full"
+        />
+        <div className="space-y-2">
+          {res.found ? (
+            <>
+              <p className={`text-lg font-semibold leading-snug ${good ? "text-saved" : "text-night"}`}>
+                {good
+                  ? `This exact file was saved on ${new Date(res.captured_at!).toLocaleString()}, as item #${res.seq} of ${res.total}.`
+                  : `This file matches item #${res.seq}, but the record chain no longer matches from item #${res.broken_at}.`}
+              </p>
+              {good && <p className="text-[15px] text-muted">Nothing in the record has been changed since.</p>}
+              <p className="break-all font-mono text-xs text-muted">record {res.entry_hash}</p>
+            </>
+          ) : (
+            <p className="text-lg font-semibold leading-snug text-night">
+              This file does not match any saved item. It may be a different file, or it may have been changed.
+            </p>
+          )}
+          <p className="break-all font-mono text-xs text-muted">file {hash}</p>
+        </div>
+      </div>
+    </section>
   );
 }
